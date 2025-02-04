@@ -1,0 +1,162 @@
+<!DOCTYPE html> 
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forum Diskusi - Farid Ardiansyah</title>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: black;
+            color: white;
+            line-height: 1.6;
+        }
+        .container {
+            padding: 80px 20px 20px;
+        }
+        .content {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .forum-post {
+            background-color: #222;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .comment-section textarea {
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #444;
+            background-color: #333;
+            color: white;
+            margin-bottom: 10px;
+        }
+        .comment-section button {
+            background-color: #00ffcc;
+            color: black;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .comments {
+            margin-top: 20px;
+        }
+        .comment {
+            background-color: #333;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        .comment .author {
+            font-weight: bold;
+            color: #00ffcc;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="content">
+            <div class="forum-post">
+                <h3>Buat Post Baru</h3>
+                <textarea id="postContent" placeholder="Tulis topik pembicaraan Anda di sini..." rows="4"></textarea>
+                <button onclick="createPost()">Post</button>
+            </div>
+            <div id="posts"></div>
+        </div>
+    </div>
+
+    <script>
+        // Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyD_htQZ1TClnXKZGRJ4izbMQ02y6V3aNAQ",
+  authDomain: "wawa44-58d1e.firebaseapp.com",
+  projectId: "wawa44-58d1e",
+  storageBucket: "wawa44-58d1e.firebasestorage.app",
+  messagingSenderId: "836899520599",
+  appId: "1:836899520599:web:b346e4370ecfa9bb89e312",
+  measurementId: "G-8LMP7F4BE9"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+
+        function createPost() {
+            const postContent = document.getElementById('postContent').value.trim();
+            if (postContent) {
+                db.collection("posts").add({
+                    content: postContent,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                }).then(() => {
+                    document.getElementById('postContent').value = '';
+                    displayPosts();
+                });
+            } else {
+                alert("Post tidak boleh kosong!");
+            }
+        }
+
+        function displayPosts() {
+            const postsContainer = document.getElementById('posts');
+            postsContainer.innerHTML = '';
+            db.collection("posts").orderBy("timestamp", "desc").onSnapshot(snapshot => {
+                postsContainer.innerHTML = snapshot.docs.map(doc => `
+                    <div class="forum-post">
+                        <h3>Post #${doc.id}</h3>
+                        <p>${doc.data().content}</p>
+                        <div class="comment-section">
+                            <textarea id="comment-${doc.id}" placeholder="Tulis komentar Anda di sini..." rows="2"></textarea>
+                            <button onclick="addComment('${doc.id}')">Kirim Komentar</button>
+                            <div class="comments" id="comment-list-${doc.id}"></div>
+                        </div>
+                    </div>
+                `).join('');
+                snapshot.docs.forEach(doc => displayComments(doc.id));
+            });
+        }
+
+        function addComment(postId) {
+            const commentInput = document.getElementById(`comment-${postId}`);
+            const commentContent = commentInput.value.trim();
+            if (commentContent) {
+                db.collection("posts").doc(postId).collection("comments").add({
+                    author: "Pengguna",
+                    content: commentContent,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                }).then(() => {
+                    commentInput.value = '';
+                });
+            } else {
+                alert("Komentar tidak boleh kosong!");
+            }
+        }
+
+        function displayComments(postId) {
+            const commentList = document.getElementById(`comment-list-${postId}`);
+            db.collection("posts").doc(postId).collection("comments").orderBy("timestamp", "asc").onSnapshot(snapshot => {
+                commentList.innerHTML = snapshot.docs.map(doc => `
+                    <div class="comment">
+                        <p><span class="author">${doc.data().author}:</span> ${doc.data().content}</p>
+                    </div>
+                `).join('');
+            });
+        }
+
+        displayPosts();
+    </script>
+</body>
+</html>
